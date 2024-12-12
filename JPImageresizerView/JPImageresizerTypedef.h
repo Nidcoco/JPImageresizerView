@@ -21,7 +21,8 @@ NS_ASSUME_NONNULL_BEGIN
  */
 typedef NS_ENUM(NSUInteger, JPImageresizerFrameType) {
     JPConciseFrameType, // default
-    JPClassicFrameType
+    JPClassicFrameType,
+    JPCustomFrameType // 自定义绿色框
 };
 
 /**

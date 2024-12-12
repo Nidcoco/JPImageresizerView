@@ -206,7 +206,7 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
         _frameLayerLineW = _isRoundResize ? 1.5 : 0.0;
     } else {
         [_borderImageView removeFromSuperview];
-        _frameLayerLineW = _isRoundResize ? 1.5 : 1.2;
+        _frameLayerLineW = _isRoundResize ? 1.5 : 2.0;
     }
     [self setFrameType:_frameType];
 }
@@ -231,6 +231,10 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
     if (frameType == JPConciseFrameType) {
         [_gridlinesLayer removeFromSuperlayer];
         self.dotsLayer.lineWidth = 0;
+    } else if (frameType == JPCustomFrameType) {
+        [_gridlinesLayer removeFromSuperlayer];
+        self.dotsLayer.lineJoin = kCALineJoinRound;
+        self.dotsLayer.lineWidth = 2;
     } else {
         [self gridlinesLayer];
         self.dotsLayer.lineWidth = _arrLineW;
@@ -489,7 +493,7 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
         
         if (maskImage != nil) isRoundResize = NO;
         
-        _frameLayerLineW = isRoundResize ? 1.5 : (borderImage ? 0.0 : 1.2);
+        _frameLayerLineW = isRoundResize ? 1.5 : (borderImage ? 0.0 : 2.0);
         _borderImageRectInset = borderImageRectInset;
         
         if (borderImage) {
@@ -508,7 +512,7 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
             _resizeWHScale = resizeWHScale == 0 ? 1 : resizeWHScale;
             [self __setIsRound:YES animated:NO];
         } else {
-            _dotWH = 12.0;
+            _dotWH = 14.0;
             _halfDotWH = _dotWH * 0.5;
             _halfArrLineW = _arrLineW * 0.5;
             _arrLength = 20.0;
@@ -548,10 +552,10 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
 
 - (UIBezierPath *)__conciseDotsPathWithFrame:(CGRect)frame {
     UIBezierPath *path = [UIBezierPath bezierPath];
-    CGFloat halfDotWH = _halfDotWH;
+//    CGFloat halfDotWH = _halfDotWH;
     CGFloat dotWH = _dotWH;
-    void (^appendPathBlock)(CGPoint point) = ^(CGPoint point){
-        [path appendPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(point.x - halfDotWH, point.y - halfDotWH, dotWH, dotWH)]];
+    void (^appendPathBlock)(CGPoint point, CGFloat WH) = ^(CGPoint point, CGFloat WH){
+        [path appendPath:[UIBezierPath bezierPathWithOvalInRect:CGRectMake(point.x - WH/2.0, point.y - WH/2.0, WH, WH)]];
     };
     
     CGPoint originPoint = frame.origin;
@@ -561,22 +565,23 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
     if (_isRoundResize) {
         CGFloat radius = frame.size.width * 0.5;
         CGFloat rightAngleSide = sqrt((pow(radius, 2) * 0.5));
-        appendPathBlock(CGPointMake(midPoint.x - rightAngleSide, midPoint.y - rightAngleSide));
-        appendPathBlock(CGPointMake(midPoint.x - rightAngleSide, midPoint.y + rightAngleSide));
-        appendPathBlock(CGPointMake(midPoint.x + rightAngleSide, midPoint.y - rightAngleSide));
-        appendPathBlock(CGPointMake(midPoint.x + rightAngleSide, midPoint.y + rightAngleSide));
+        appendPathBlock(CGPointMake(midPoint.x - rightAngleSide, midPoint.y - rightAngleSide), dotWH);
+        appendPathBlock(CGPointMake(midPoint.x - rightAngleSide, midPoint.y + rightAngleSide), dotWH);
+        appendPathBlock(CGPointMake(midPoint.x + rightAngleSide, midPoint.y - rightAngleSide), dotWH);
+        appendPathBlock(CGPointMake(midPoint.x + rightAngleSide, midPoint.y + rightAngleSide), dotWH);
     } else {
-        appendPathBlock(originPoint);
-        appendPathBlock(CGPointMake(originPoint.x, maxPoint.y));
-        appendPathBlock(CGPointMake(maxPoint.x, originPoint.y));
-        appendPathBlock(CGPointMake(maxPoint.x, maxPoint.y));
+        appendPathBlock(originPoint, dotWH);
+        appendPathBlock(CGPointMake(originPoint.x, maxPoint.y), dotWH);
+        appendPathBlock(CGPointMake(maxPoint.x, originPoint.y), dotWH);
+        appendPathBlock(CGPointMake(maxPoint.x, maxPoint.y), dotWH);
     }
     
+    CGFloat centerWH = _frameType == JPConciseFrameType ? dotWH : 7.0;
     if (_isShowMidDots) {
-        appendPathBlock(CGPointMake(originPoint.x, midPoint.y));
-        appendPathBlock(CGPointMake(maxPoint.x, midPoint.y));
-        appendPathBlock(CGPointMake(midPoint.x, originPoint.y));
-        appendPathBlock(CGPointMake(midPoint.x, maxPoint.y));
+        appendPathBlock(CGPointMake(originPoint.x, midPoint.y), centerWH);
+        appendPathBlock(CGPointMake(maxPoint.x, midPoint.y), centerWH);
+        appendPathBlock(CGPointMake(midPoint.x, originPoint.y), centerWH);
+        appendPathBlock(CGPointMake(midPoint.x, maxPoint.y), centerWH);
     }
     
     return path;
@@ -799,6 +804,9 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
     if (_frameType == JPConciseFrameType) {
         _dotsLayer.fillColor = strokeCGColor;
         _dotsLayer.strokeColor = clearCGColor;
+    } else if (_frameType == JPCustomFrameType) {
+        _dotsLayer.fillColor = [[UIColor whiteColor] CGColor];
+        _dotsLayer.strokeColor = strokeCGColor;
     } else {
         _dotsLayer.fillColor = clearCGColor;
         _dotsLayer.strokeColor = strokeCGColor;
@@ -1201,7 +1209,7 @@ typedef NS_ENUM(NSUInteger, JPDotRegion) {
         _arrLength = 0.0;
         _midArrLength = 0.0;
     } else {
-        _frameLayerLineW = _borderImage ? 0.0 : 1.2;
+        _frameLayerLineW = _borderImage ? 0.0 : 2.0;
         _dotWH =  12.0;
         _halfDotWH = _dotWH * 0.5;
         _halfArrLineW = _arrLineW * 0.5;
